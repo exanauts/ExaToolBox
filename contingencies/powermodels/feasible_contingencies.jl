@@ -38,7 +38,7 @@ function solve_contingency(id::Int, network, ::GenContingency)
 end
 
 if length(ARGS) != 1
-    println("Usage: julia --project feasible_contingencies.jl casefile")
+    println("Usage: julia [-p nprocs] --project feasible_contingencies.jl casefile")
     exit()
 end
 
