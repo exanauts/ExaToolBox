@@ -49,8 +49,21 @@ network = PowerModels.parse_file(case; import_all=true)
 ngen = length(network["gen"])
 nlines = length(network["branch"])
 
-results_gens = pmap(x -> solve_contingency(x, network, GenContingency()), 1:ngen)
-results_lines = pmap(x -> solve_contingency(x, network, LineContingency()), 1:nlines)
+
+
+
+
+
+	try 
+	    result_gens= pmap(x -> solve_contingency(x, network, GenContingency()), 1:ngen)
+	catch e
+	    println("Does not work with generator")
+	end
+
+
+
+;results_gens = pmap(x -> solve_contingency(x, network, GenContingency()), 1:10)
+;results_lines = pmap(x -> solve_contingency(x, network, LineContingency()), 1:10)
 
 println("Found $(length(findall(results_gens))) feasible generator contingencies of a total of $ngen generators: $(findall(results_gens))")
 println("Found $(length(findall(results_lines))) feasible line contingencies of a total of $nlines lines: $(findall(results_lines))")
