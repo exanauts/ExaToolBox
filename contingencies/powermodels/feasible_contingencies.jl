@@ -43,6 +43,7 @@ end
 case = ARGS[1]
 
 network = PowerModels.parse_file(case; import_all=true)
+PowerModels.export_matpower("export.m", network)
 
 ngen = length(network["gen"])
 nlines = length(network["branch"])
