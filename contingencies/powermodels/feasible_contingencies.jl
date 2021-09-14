@@ -6,35 +6,33 @@ abstract type Contingency end
 struct LineContingency <: Contingency end
 struct GenContingency <: Contingency end
 
-
-function solve_contingency(id::Int, network, ::LineContingency)
-	cnetwork = deepcopy(network)
-	cnetwork["branch"]["$id"]["br_status"] = 0
-	result = run_ac_opf(cnetwork, optimizer_with_attributes(
-        Ipopt.Optimizer,
-        "print_level" => 0
+function solve(network)
+    try
+        result = run_ac_opf(network, optimizer_with_attributes(
+            Ipopt.Optimizer,
+            "print_level" => 0
+            )
         )
-    )
-    if result["termination_status"] == LOCALLY_SOLVED
-        return true
-    else
+        if result["termination_status"] == LOCALLY_SOLVED
+            return true
+        else
+            return false
+        end
+    catch e
         return false
     end
 end
 
-function solve_contingency(id::Int, network, ::GenContingency)
+function solve_contingency(id::Int, network, ::LineContingency)
 	cnetwork = deepcopy(network)
-	cnetwork["gen"]["$id"]["gen_status"] = 0
-	result = run_ac_opf(cnetwork, optimizer_with_attributes(
-        Ipopt.Optimizer,
-        "print_level" => 0
-        )
-    )
-    if result["termination_status"] == LOCALLY_SOLVED
-        return true
-    else
-        return false
-    end
+	cnetwork["branch"]["$id"]["br_status"] = 0
+    return solve(cnetwork)
+end
+
+function solve_contingency(id::Int, network, ::GenContingency)
+    cnetwork = deepcopy(network)
+    cnetwork["gen"]["$id"]["gen_status"] = 0
+    return solve(cnetwork)
 end
 
 if length(ARGS) != 1
@@ -49,21 +47,8 @@ network = PowerModels.parse_file(case; import_all=true)
 ngen = length(network["gen"])
 nlines = length(network["branch"])
 
-
-
-
-
-
-	try 
-	    result_gens= pmap(x -> solve_contingency(x, network, GenContingency()), 1:ngen)
-	catch e
-	    println("Does not work with generator")
-	end
-
-
-
-;results_gens = pmap(x -> solve_contingency(x, network, GenContingency()), 1:10)
-;results_lines = pmap(x -> solve_contingency(x, network, LineContingency()), 1:10)
+results_gens = pmap(x -> solve_contingency(x, network, GenContingency()), 1:ngen)
+results_lines = pmap(x -> solve_contingency(x, network, LineContingency()), 1:nlines)
 
 println("Found $(length(findall(results_gens))) feasible generator contingencies of a total of $ngen generators: $(findall(results_gens))")
 println("Found $(length(findall(results_lines))) feasible line contingencies of a total of $nlines lines: $(findall(results_lines))")
