@@ -1,18 +1,33 @@
+using Distributed
+if length(ARGS) != 2
+    println("Usage: julia --project feasible_contingencies.jl casefile nprocs")
+    exit()
+end
+nprocs = parse(Int, ARGS[2])
+addprocs(nprocs, exeflags="--project")
+@everywhere begin
 using PowerModels
 using Ipopt
-using Distributed
 
 abstract type Contingency end
 struct LineContingency <: Contingency end
 struct GenContingency <: Contingency end
 
-function solve(network)
+function solve(network, id)
     try
-        result = run_ac_opf(network, optimizer_with_attributes(
-            Ipopt.Optimizer,
-            "print_level" => 0
+        # if id != 133
+        #     result = run_ac_opf(network, optimizer_with_attributes(
+        #         Ipopt.Optimizer,
+        #         "print_level" => 0, "max_iter" => 200
+        #         )
+        #     )
+        # else
+            result = run_ac_opf(network, optimizer_with_attributes(
+                Ipopt.Optimizer,
+                "print_level" => 5, "max_iter" => 200
+                )
             )
-        )
+        # end
         if result["termination_status"] == LOCALLY_SOLVED
             return true
         else
@@ -26,18 +41,14 @@ end
 function solve_contingency(id::Int, network, ::LineContingency)
 	cnetwork = deepcopy(network)
 	cnetwork["branch"]["$id"]["br_status"] = 0
-    return solve(cnetwork)
+    return solve(cnetwork, id)
 end
 
 function solve_contingency(id::Int, network, ::GenContingency)
     cnetwork = deepcopy(network)
     cnetwork["gen"]["$id"]["gen_status"] = 0
-    return solve(cnetwork)
+    return solve(cnetwork, id)
 end
-
-if length(ARGS) != 1
-    println("Usage: julia [-p nprocs] --project feasible_contingencies.jl casefile")
-    exit()
 end
 
 case = ARGS[1]
